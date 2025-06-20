@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Heureux Web - Multi Profils Facebook Lite</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Simulation Facebook Lite - Multi Profils</h1>
+            <button id="modeToggle">馃寵</button>
+        </header>
+        <section class="profile">
+            <label for="profileSelect">Choisir un profil :</label>
+            <select id="profileSelect"></select>
+            <button id="addProfileBtn">+ Nouveau Profil</button>
+            <button id="deleteProfileBtn" style="background:#a00;">Supprimer Profil</button>
+
+            <div id="profileDetails" style="margin-top:15px;">
+                <img src="avatar.png" alt="Photo de profil" id="avatar" />
+                <input type="text" id="nameInput" placeholder="Nom du profil" />
+                <div class="stats">
+                    <p>馃憤 Likes : <span id="likes">0</span></p>
+                    <p>馃挰 Commentaires : <span id="comments">0</span></p>
+                    <p>馃懃 Abonn茅s : <span id="followers">0</span></p>
+                </div>
+                <button id="startSimulationBtn">Lancer la simulation</button>
+            </div>
+        </section>
+
+        <section class="feed">
+            <h2>Fil d'actualit茅</h2>
+            <div id="posts"></div>
+        </section>
+    </div>
+<script src="script.js"></script>
+</body>
+</html>
+
+let profiles = JSON.parse(localStorage.getItem('profiles')) || [];
+let currentProfileId = null;
+let likeInterval, commentInterval, followerInterval;
+
+const profileSelect = document.getElementById('profileSelect');
+const avatar = document.getElementById('avatar');
+const nameInput = document.getElementById('nameInput');
+const likesSpan = document.getElementById('likes');
+const commentsSpan = document.getElementById('comments');
+const followersSpan = document.getElementById('followers');
+const postsDiv = document.getElementById('posts');
+
+function saveProfiles() {
+    localStorage.setItem('profiles', JSON.stringify(profiles));
+}
+
+function updateProfileSelect() {
+    profileSelect.innerHTML = '';
+    profiles.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name || 'Profil sans nom';
+        profileSelect.appendChild(option);
+    });
+    if(profiles.length > 0) {
+        profileSelect.value = currentProfileId || profiles[0].id;
+        loadProfile(profileSelect.value);
+    } else {
+        clearProfile();
+    }
+}
+
+function clearProfile() {
+    currentProfileId = null;
+    avatar.src = 'avatar.png';
+    nameInput.value = '';
+    likesSpan.textContent = '0';
+    commentsSpan.textContent = '0';
+    followersSpan.textContent = '0';
+    postsDiv.innerHTML = '';
+}
+
+function loadProfile(id) {
+    stopSimulation();
+    currentProfileId = id;
+    const p = profiles.find(x => x.id === id);
+    if(p) {
+        avatar.src = p.avatar || 'avatar.png';
+        nameInput.value = p.name;
+        likesSpan.textContent = p.likes || 0;
+        commentsSpan.textContent = p.comments || 0;
+        followersSpan.textContent = p.followers || 0;
+        postsDiv.innerHTML = '';
+        if(p.posts) {
+            p.posts.forEach(postText => {
+                const post = document.createElement('div');
+                post.className = 'post';
+                post.textContent = postText;
+                postsDiv.appendChild(post);
+            });
+        }
+    }
+}
+
+function addProfile() {
+    const id = 'profile_' + Date.now();
+    const newProfile = {
+        id: id,
+        name: 'Nouveau Profil',
+        avatar: 'avatar.png',
+        likes: 0,
+        comments: 0,
+        followers: 0,
+        posts: []
+    };
+    profiles.push(newProfile);
+    currentProfileId = id;
+    saveProfiles();
+    updateProfileSelect();
+    profileSelect.value = id;
+    loadProfile(id);
+}
+
+function deleteProfile() {
+    if (!currentProfileId) return;
+    profiles = profiles.filter(p => p.id !== currentProfileId);
+    saveProfiles();
+    if(profiles.length > 0) {
+        currentProfileId = profiles[0].id;
+    } else {
+        currentProfileId = null;
+    }
+    updateProfileSelect();
+}
+
+function updateCurrentProfile() {
+    if (!currentProfileId) return;
+    const p = profiles.find(x => x.id === currentProfileId);
+    if(p) {
+        p.name = nameInput.value;
+        saveProfiles();
+        updateProfileSelect();
+    }
+}
+
+function startSimulation() {
+    if (!currentProfileId) return;
+    stopSimulation();
+    const p = profiles.find(x => x.id === currentProfileId);
+    if(!p) return;
+    likeInterval = setInterval(() => {
+        const incr = Math.floor(Math.random() * 5);
+        p.likes += incr;
+        likesSpan.textContent = p.likes;
+        saveProfiles();
+    }, 1000);
+    commentInterval = setInterval(() => {
+        const incr = Math.floor(Math.random() * 3);
+        p.comments += incr;
+        likesSpan.textContent = p.likes;
+        commentsSpan.textContent = p.comments;
+        const postText = "Nouveau commentaire simulé ! " + new Date().toLocaleTimeString();
+        p.posts.unshift(postText);
+        if(p.posts.length > 10) p.posts.pop();
+        renderPosts(p.posts);
+        saveProfiles();
+    }, 1500);
+    followerInterval = setInterval(() => {
+        const incr = Math.floor(Math.random() * 10);
+        p.followers += incr;
+        followersSpan.textContent = p.followers;
+        saveProfiles();
+    }, 2000);
+}
+
+function stopSimulation() {
+    clearInterval(likeInterval);
+    clearInterval(commentInterval);
+    clearInterval(followerInterval);
+}
+
+function renderPosts(posts) {
+    postsDiv.innerHTML = '';
+    posts.forEach(text => {
+        const post = document.createElement('div');
+        post.className = 'post';
+        post.textContent = text;
+        postsDiv.appendChild(post);
+    });
+}
+
+document.getElementById('startSimulationBtn').onclick = () => {
+    startSimulation();
+};
+
+document.getElementById('addProfileBtn').onclick = () => {
+    addProfile();
+};
+
+document.getElementById('deleteProfileBtn').onclick = () => {
+    deleteProfile();
+};
+
+profileSelect.onchange = (e) => {
+    loadProfile(e.target.value);
+};
+
+nameInput.oninput = () => {
+    updateCurrentProfile();
+};
+
+document.getElementById('modeToggle').onclick = () => {
+    document.body.classList.toggle('light-mode');
+};
+
+// Initialisation
+if(profiles.length === 0) {
+    addProfile();
+} else {
+    updateProfileSelect();
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: white;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    padding: 20px;
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+button {
+    background-color: red;
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-left: 5px;
+}
+#deleteProfileBtn {
+    background-color: #a00;
+}
+.profile img {
+    width: 100px;
+    border-radius: 50%;
+}
+input {
+    width: 100%;
+    margin: 10px 0;
+    padding: 8px;
+}
+.stats p {
+    margin: 5px 0;
+}
+.feed {
+    margin-top: 20px;
+}
+.post {
+    background-color: #2e2e2e;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+}
+.light-mode {
+    background-color: white;
+    color: black;
+}
+.light-mode .post {
+    background-color: #eee;
+}
