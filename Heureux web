@@ -275,4 +275,4 @@ input {
 }
 .light-mode .post {
     background-color: #eee;
-}
+
